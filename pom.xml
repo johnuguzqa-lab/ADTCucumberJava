@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.company</groupId>
+    <artifactId>cucumber-bdd-framework</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>cucumber-bdd-framework</name>
+    <description>
+        Production-ready BDD automation framework built with Java 21+, Maven,
+        Cucumber JVM, JUnit 5 and Selenium WebDriver.
+    </description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Compile to Java 21 LTS bytecode -->
+        <maven.compiler.release>21</maven.compiler.release>
+
+        <!-- Dependency versions (stable, mutually compatible) -->
+        <cucumber.version>7.18.1</cucumber.version>
+        <selenium.version>4.44.0</selenium.version>
+        <junit.jupiter.version>5.10.3</junit.jupiter.version>
+        <junit.platform.version>1.10.3</junit.platform.version>
+        <slf4j.version>2.0.13</slf4j.version>
+        <logback.version>1.5.6</logback.version>
+
+        <!-- Plugin versions -->
+        <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+        <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
+    </properties>
+
+    <dependencies>
+        <!-- ========== Cucumber JVM ========== -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-java</artifactId>
+            <version>${cucumber.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Cucumber JUnit Platform Engine: lets JUnit 5 / Maven Surefire drive Cucumber -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-junit-platform-engine</artifactId>
+            <version>${cucumber.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ========== JUnit 5 ========== -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- JUnit Platform Suite API: enables @Suite runner -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-suite</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Required by Surefire 3.x to discover JUnit Platform tests -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>${junit.platform.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ========== Selenium WebDriver (Selenium Manager auto-manages driver binaries) ========== -->
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>${selenium.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ========== Logging (SLF4J API + Logback implementation) ========== -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Compiler: enforce Java 17 language level -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin.version}</version>
+            </plugin>
+
+            <!-- Surefire runs the Cucumber @Suite through the JUnit Platform -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire.plugin.version}</version>
+                <configuration>
+                    <!-- Only execute the Cucumber suite runner; unit tests (if any) still match. -->
+                    <includes>
+                        <include>**/Test*.java</include>
+                    </includes>
+                    <!-- Surefire propagates Maven CLI system properties (-Dcucumber.*) to the forked
+                         JVM, so overrides like -Dcucumber.filter.tags="@smoke" reach the Cucumber
+                         engine without extra configuration (see the official Cucumber docs). -->
+                    <forkCount>1</forkCount>
+                    <reuseForks>true</reuseForks>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!--
+          Profile-based tag filters.
+
+          Prefer these over the raw CLI form:
+              mvn test -Dcucumber.filter.tags="@smoke"
+          On Windows, PowerShell/cmd mangle that argument (it contains @, = and spaces),
+          which surfaces as: [ERROR] Unknown lifecycle phase ".filter.tags=@smoke".
+
+          A profile instead sets the value as a real JVM system property via surefire's
+          <systemPropertyVariables>, which overrides the "not @ui" default in
+          junit-platform.properties. No quoting needed, works in any shell:
+
+              mvnw test -Psmoke        -> @smoke scenarios, browser-free
+              mvnw test -Pvalidation   -> @validation scenarios
+              mvnw test -Pui           -> @ui browser smoke test (headless Chrome)
+        -->
+        <profile>
+            <id>smoke</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <cucumber.filter.tags>@smoke and not @ui</cucumber.filter.tags>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>validation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <cucumber.filter.tags>@validation</cucumber.filter.tags>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>regression</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <cucumber.filter.tags>@regression</cucumber.filter.tags>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>ui</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <cucumber.filter.tags>@ui</cucumber.filter.tags>
+                                <browser>chrome</browser>
+                                <headless>true</headless>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>

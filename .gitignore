@@ -1,0 +1,30 @@
+# ========== Build output ==========
+target/
+*.class
+
+# ========== IDE ==========
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# ========== OS ==========
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========== Logs & reports ==========
+*.log
+test-logs/
+
+# ========== Local configuration (never commit secrets) ==========
+*.local.properties
+secrets.properties
+
+# ========== Selenium Manager cache ==========
+.selenium/
